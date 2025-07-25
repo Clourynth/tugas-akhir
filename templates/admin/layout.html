@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}Dashboard{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+    }
+  </script>
+  {% block head %}{% endblock %}
+</head>
+
+{% block load %}
+{% include 'admin/partials/load.html' %}
+{% endblock %}
+
+<body class="bg-gray-100 min-h-screen dark:bg-gray-900 transition-colors duration-500"></body>
+{% block navbar %}
+{% include 'admin/partials/navbar.html' %}
+{% endblock %}
+
+<div id="pageWrapper" class="flex transition-all duration-300 justify-center">
+  {% block sidebar %}
+  {% include 'admin/partials/sidebar.html' %}
+  {% endblock %}
+
+  <main id="mainContent" class="w-full max-w-5xl p-8 pt-20 bg-transparent transition-all duration-500 ml-64">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/ui_scripts.js') }}"></script>
+{% endblock %}
+</body>
+
+</html>

@@ -1,0 +1,110 @@
+{% extends "user/layout.html" %}
+{% block title %}Deteksi Citra{% endblock %}
+{% block content %}
+
+<div class="-mt-28 bg-gray-100 dark:bg-gray-900 min-h-screen flex items-center justify-center transition-colors duration-500">
+  <div class="absolute top-4 right-4">
+    <button id="darkModeToggle"
+      class="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white p-2 rounded transition-colors"
+      title="Toggle Dark Mode">
+      <svg id="darkIcon" class="w-6 h-6 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 3v1m0 16v1m8.66-13.66l-.71.71M4.05 19.07l-.71.71M21 12h-1M4 12H3m16.66 5.66l-.71-.71M4.05 4.93l-.71-.71M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+      </svg>
+      <svg id="lightIcon" class="w-6 h-6 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z" />
+      </svg>
+    </button>
+  </div>
+  
+  <div class="mt-28 w-full max-w-4xl mx-auto px-4">
+    <!-- Upload Form -->
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mb-6 transition-colors duration-500">
+      <h1 class="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Upload Citra untuk Deteksi Retakan</h1>
+      
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="mb-4 p-3 rounded {% if category == 'error' %}bg-red-100 text-red-700{% elif category == 'success' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+      
+      <form method="POST" enctype="multipart/form-data" class="space-y-4">
+        <input type="text" name="nama_jembatan" placeholder="Nama Jembatan" 
+               class="w-full border px-3 py-2 rounded dark:bg-gray-900 dark:text-gray-100 dark:border-gray-600" required>
+        <input type="text" name="lokasi" placeholder="Lokasi" 
+               class="w-full border px-3 py-2 rounded dark:bg-gray-900 dark:text-gray-100 dark:border-gray-600" required>
+        <input type="file" name="image" accept="image/*" 
+               class="w-full border px-3 py-2 rounded dark:bg-gray-900 dark:text-gray-100 dark:border-gray-600" required>
+        <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded w-full hover:bg-blue-600 transition-colors">
+          Upload & Deteksi
+        </button>
+      </form>
+    </div>
+
+    <!-- Results Section -->
+    {% if result %}
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg transition-colors duration-500">
+      <h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Hasil Deteksi</h2>
+      
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- Image Display -->
+        <div>
+          <h3 class="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">Citra yang Dianalisis</h3>
+          <img src="{{ url_for('static', filename=result.image_path) }}" 
+               alt="Uploaded Image" class="w-full h-auto rounded border">
+        </div>
+        
+        <!-- Detection Results -->
+        <div>
+          <h3 class="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">Informasi Deteksi</h3>
+          <div class="space-y-2">
+            <p class="text-gray-900 dark:text-gray-100"><strong>Nama Jembatan:</strong> {{ result.nama_jembatan }}</p>
+            <p class="text-gray-900 dark:text-gray-100"><strong>Lokasi:</strong> {{ result.lokasi }}</p>
+            <p class="text-gray-900 dark:text-gray-100">
+              <strong>Status:</strong> 
+              <span class="{% if result.detected %}text-red-600{% else %}text-green-600{% endif %}">
+                {% if result.detected %}Retakan Terdeteksi{% else %}Tidak Ada Retakan{% endif %}
+              </span>
+            </p>
+            <p class="text-gray-900 dark:text-gray-100"><strong>Jumlah Deteksi:</strong> {{ result.num_detections }}</p>
+            
+            {% if result.predictions %}
+            <div class="mt-4">
+              <h4 class="font-semibold text-gray-900 dark:text-gray-100">Detail Deteksi:</h4>
+              <div class="mt-2 space-y-1">
+                {% for pred in result.predictions %}
+                <div class="text-sm text-gray-700 dark:text-gray-300">
+                  Confidence: {{ "%.2f"|format(pred.score * 100) }}%
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+// Dark mode toggle functionality
+document.getElementById('darkModeToggle').addEventListener('click', function() {
+    document.documentElement.classList.toggle('dark');
+    localStorage.setItem('darkMode', document.documentElement.classList.contains('dark'));
+});
+
+// Load dark mode preference
+if (localStorage.getItem('darkMode') === 'true') {
+    document.documentElement.classList.add('dark');
+}
+</script>
+
+{% endblock %}
