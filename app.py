@@ -138,12 +138,13 @@ def detection():
             file.save(filepath)
             
             # Lakukan prediksi menggunakan detector
-            prediction_result = detector.predict(filepath)
+            prediction_result = detector.predict(filepath, save_annotated=True, output_dir=app.config['UPLOAD_FOLDER'])
             
             # Format result untuk template
             result = {
                 'detected': prediction_result['detected'],
-                'image_path': f'uploads/{filename}',
+                'original_image_path': f'uploads/{filename}',
+                'annotated_image_path': prediction_result['annotated_image_path'],
                 'num_detections': prediction_result['num_detections'],
                 'predictions': prediction_result['predictions'],
                 'nama_jembatan': nama_jembatan,

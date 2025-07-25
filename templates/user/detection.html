@@ -52,13 +52,24 @@
     <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg transition-colors duration-500">
       <h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Hasil Deteksi</h2>
       
-      <div class="grid md:grid-cols-2 gap-6">
-        <!-- Image Display -->
+      <div class="grid lg:grid-cols-3 gap-6">
+        <!-- Original Image -->
         <div>
-          <h3 class="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">Citra yang Dianalisis</h3>
-          <img src="{{ url_for('static', filename=result.image_path) }}" 
-               alt="Uploaded Image" class="w-full h-auto rounded border">
+          <h3 class="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">Citra Asli</h3>
+          <img src="{{ url_for('static', filename=result.original_image_path) }}" 
+               alt="Original Image" class="w-full h-auto rounded border">
         </div>
+        
+        <!-- Annotated Image -->
+        {% if result.annotated_image_path %}
+        <div>
+          <h3 class="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">
+            {% if result.detected %}Hasil Deteksi (Area Retakan){% else %}Hasil Analisis{% endif %}
+          </h3>
+          <img src="{{ url_for('static', filename=result.annotated_image_path) }}" 
+               alt="Detection Result" class="w-full h-auto rounded border">
+        </div>
+        {% endif %}
         
         <!-- Detection Results -->
         <div>
@@ -93,18 +104,5 @@
     {% endif %}
   </div>
 </div>
-
-<script>
-// Dark mode toggle functionality
-document.getElementById('darkModeToggle').addEventListener('click', function() {
-    document.documentElement.classList.toggle('dark');
-    localStorage.setItem('darkMode', document.documentElement.classList.contains('dark'));
-});
-
-// Load dark mode preference
-if (localStorage.getItem('darkMode') === 'true') {
-    document.documentElement.classList.add('dark');
-}
-</script>
 
 {% endblock %}
