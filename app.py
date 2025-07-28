@@ -7,6 +7,7 @@ from functools import wraps
 from utils.predictor import CrackDetector
 
 from models.user_model import UserModel
+from models.jembatan_model import JembatanModel
 
 app = Flask(__name__)
 app.secret_key = "secret_key"  # Tambahkan secret key untuk session
@@ -20,6 +21,14 @@ app.config['MYSQL_DB'] = 'db_deteksiretakan'
 mysql = MySQL(app)
 # Inisialisasi user_model agar bisa digunakan
 user_model = UserModel(mysql)
+jembatan_model = JembatanModel(mysql)
+
+# Create tables on startup
+with app.app_context():
+    try:
+        jembatan_model.create_table()
+    except Exception as e:
+        print(f"Error creating tables: {e}")
 
 UPLOAD_FOLDER = "static/uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -101,8 +110,14 @@ def logout():
 @admin_required
 def dashboard():
     username = session['username']
-    return render_template("admin/dashboard.html", user=username)
-
+    
+    # Get statistics
+    stats = jembatan_model.get_statistics()
+    
+    # Get all bridge data for admin
+    jembatan_list = jembatan_model.get_all_jembatan()
+    
+    return render_template("admin/dashboard.html", user=username, stats=stats, jembatan_list=jembatan_list)
 
 # Konfigurasi folder upload
 UPLOAD_FOLDER = 'static/uploads'
@@ -115,6 +130,9 @@ detector = CrackDetector()
 @app.route("/detection", methods=["GET", "POST"])
 @user_required
 def detection():
+    username = session['username']
+    user_id = session['id']
+
     result = None  # Initialize result variable
     
     if request.method == 'POST':
@@ -148,15 +166,61 @@ def detection():
                 'num_detections': prediction_result['num_detections'],
                 'predictions': prediction_result['predictions'],
                 'nama_jembatan': nama_jembatan,
-                'lokasi': lokasi
+                'lokasi': lokasi,
+                'user_id': user_id
             }
             
-            if prediction_result['detected']:
-                flash(f'Retakan terdeteksi! Ditemukan {prediction_result["num_detections"]} area retakan.', 'success')
-            else:
-                flash('Tidak ada retakan yang terdeteksi.', 'info')
+            # Save to database
+            try:
+                jembatan_id = jembatan_model.save_detection_result(result)
+                result['id'] = jembatan_id
+                
+                if prediction_result['detected']:
+                    flash(f'Retakan terdeteksi! Ditemukan {prediction_result["num_detections"]} area retakan. Data telah disimpan.', 'success')
+                else:
+                    flash('Tidak ada retakan yang terdeteksi. Data telah disimpan.', 'info')
+            except Exception as e:
+                flash(f'Error menyimpan data: {str(e)}', 'error')
 
-    return render_template("user/detection.html", result=result)
+    return render_template("user/detection.html", result=result, user=username)
+
+@app.route("/history")
+@user_required
+def history():
+    """Show user's detection history"""
+    username = session['username']
+    user_id = session['id']
+    
+    jembatan_list = jembatan_model.get_all_jembatan(user_id)
+    
+    return render_template("user/history.html", user=username, jembatan_list=jembatan_list)
+
+@app.route("/delete_jembatan/<int:jembatan_id>", methods=["POST"])
+@admin_required
+def delete_jembatan(jembatan_id):
+    """Delete bridge record (admin only)"""
+    try:
+        # Get image paths before deletion for cleanup
+        jembatan = jembatan_model.get_jembatan_by_id(jembatan_id)
+        
+        if jembatan_model.delete_jembatan(jembatan_id):
+            # Optional: Delete image files
+            if jembatan:
+                try:
+                    if jembatan['original_image_path']:
+                        os.remove(os.path.join('static', jembatan['original_image_path']))
+                    if jembatan['annotated_image_path']:
+                        os.remove(os.path.join('static', jembatan['annotated_image_path']))
+                except:
+                    pass  # Ignore file deletion errors
+            
+            flash('Data jembatan berhasil dihapus', 'success')
+        else:
+            flash('Gagal menghapus data jembatan', 'error')
+    except Exception as e:
+        flash(f'Error: {str(e)}', 'error')
+    
+    return redirect(url_for('dashboard'))
 
 if __name__ == "__main__":
     app.run(debug=True)

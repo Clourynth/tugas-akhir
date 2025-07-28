@@ -22,7 +22,7 @@ class CrackDetector:
         """Setup configuration untuk model Detectron2"""
         self.cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml"))
         self.cfg.MODEL.WEIGHTS = model_path
-        self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
+        self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.2
         self.cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # Hanya 1 kelas (retakan)
         self.cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     
@@ -50,6 +50,26 @@ class CrackDetector:
         instances = outputs["instances"]
         
         detections = []
+
+        # 🔧 Gabungkan semua instance menjadi satu mask (jika ada mask)
+        if len(instances) > 1 and instances.has("pred_masks"):
+            masks = instances.pred_masks  # shape: [N, H, W]
+            combined_mask = masks.sum(dim=0) > 0  # union semua mask
+
+            from detectron2.structures import Instances, Boxes
+
+            new_instances = Instances(instances.image_size)
+            new_instances.pred_masks = combined_mask.unsqueeze(0)
+            new_instances.scores = torch.tensor([instances.scores.max()])
+            new_instances.pred_classes = torch.tensor([instances.pred_classes[0]])
+
+            # Buat bounding box dari mask gabungan
+            ys, xs = combined_mask.nonzero(as_tuple=True)
+            x1, y1, x2, y2 = xs.min(), ys.min(), xs.max(), ys.max()
+            new_instances.pred_boxes = Boxes(torch.tensor([[x1, y1, x2, y2]]).float())
+
+            instances = new_instances
+
         annotated_image_path = None
         
         if len(instances) > 0:
