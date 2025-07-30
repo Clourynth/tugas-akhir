@@ -6,8 +6,10 @@ from pprint import pformat
 from functools import wraps
 from utils.predictor import CrackDetector
 
-from models.user_model import UserModel
-from models.jembatan_model import JembatanModel
+from models.model_login import UserModel
+from models.model_dashboard import DashboardModel
+from models.model_detection import DetectionModel
+from models.model_history import HistoryModel
 
 app = Flask(__name__)
 app.secret_key = "secret_key"  # Tambahkan secret key untuk session
@@ -21,12 +23,14 @@ app.config['MYSQL_DB'] = 'db_deteksiretakan'
 mysql = MySQL(app)
 # Inisialisasi user_model agar bisa digunakan
 user_model = UserModel(mysql)
-jembatan_model = JembatanModel(mysql)
+dashboard_model = DashboardModel(mysql)
+detection_model = DetectionModel(mysql)
+history_model = HistoryModel(mysql)
 
 # Create tables on startup
 with app.app_context():
     try:
-        jembatan_model.create_table()
+        detection_model.create_table()
     except Exception as e:
         print(f"Error creating tables: {e}")
 
@@ -112,10 +116,10 @@ def dashboard():
     username = session['username']
     
     # Get statistics
-    stats = jembatan_model.get_statistics()
+    stats = dashboard_model.get_statistics()
     
     # Get all bridge data for admin
-    jembatan_list = jembatan_model.get_all_jembatan()
+    jembatan_list = history_model.get_all_jembatan()
     
     return render_template("admin/dashboard.html", user=username, stats=stats, jembatan_list=jembatan_list)
 
@@ -172,7 +176,7 @@ def detection():
             
             # Save to database
             try:
-                jembatan_id = jembatan_model.save_detection_result(result)
+                jembatan_id = detection_model.save_detection_result(result)
                 result['id'] = jembatan_id
                 
                 if prediction_result['detected']:
@@ -191,7 +195,7 @@ def history():
     username = session['username']
     user_id = session['id']
     
-    jembatan_list = jembatan_model.get_all_jembatan(user_id)
+    jembatan_list = history_model.get_all_jembatan(user_id)
     
     return render_template("user/history.html", user=username, jembatan_list=jembatan_list)
 
@@ -201,9 +205,9 @@ def delete_jembatan(jembatan_id):
     """Delete bridge record (admin only)"""
     try:
         # Get image paths before deletion for cleanup
-        jembatan = jembatan_model.get_jembatan_by_id(jembatan_id)
+        jembatan = history_model.get_jembatan_by_id(jembatan_id)
         
-        if jembatan_model.delete_jembatan(jembatan_id):
+        if history_model.delete_jembatan(jembatan_id):
             # Optional: Delete image files
             if jembatan:
                 try:
