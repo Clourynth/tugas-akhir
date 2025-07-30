@@ -37,14 +37,14 @@ function checkScreenSize() {
       sidebar.style.transform = "translateX(0)";
       mainContent.style.marginLeft = "16rem"; // 256px = 16rem = ml-64
       pageWrapper.classList.remove("justify-center");
-      pageWrapper.classList.add("justify-start");
+      pageWrapper.classList.add("justify-center");
     }
   } else {
     if (isSidebarOpen) {
       isSidebarOpen = false;
       sidebar.style.transform = "translateX(-100%)";
       mainContent.style.marginLeft = "0";
-      pageWrapper.classList.remove("justify-start");
+      pageWrapper.classList.remove("justify-center");
       pageWrapper.classList.add("justify-center");
     }
   }
@@ -63,13 +63,13 @@ sidebarToggle.addEventListener("click", () => {
     if (window.innerWidth >= 768) {
       mainContent.style.marginLeft = "16rem"; // 256px = 16rem = ml-64
       pageWrapper.classList.remove("justify-center");
-      pageWrapper.classList.add("justify-start");
+      pageWrapper.classList.add("justify-center");
     }
   } else {
     sidebar.style.transform = "translateX(-100%)";
     if (window.innerWidth >= 768) {
       mainContent.style.marginLeft = "0";
-      pageWrapper.classList.remove("justify-start");
+      pageWrapper.classList.remove("justify-center");
       pageWrapper.classList.add("justify-center");
     }
   }
