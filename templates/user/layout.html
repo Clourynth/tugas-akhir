@@ -3,6 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}{% endblock %}</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -12,8 +13,6 @@
   </script>
   {% block head %}{% endblock %}
 </head>
-
-
 
 <body class="bg-gray-100 min-h-screen dark:bg-gray-900 transition-colors duration-500"></body>
 {% block navbar %}
@@ -29,7 +28,7 @@
   {% include 'user/partials/sidebar.html' %}
   {% endblock %}
 
-  <main id="mainContent" class="w-full max-w-5xl p-8 pt-20 bg-transparent transition-all duration-500 ml-64">
+  <main id="mainContent" class="w-full max-w-5xl p-4 md:p-8 pt-20 bg-transparent transition-all duration-500">
     {% block content %}{% endblock %}
   </main>
 </div>
