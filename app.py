@@ -226,5 +226,42 @@ def delete_jembatan(jembatan_id):
     
     return redirect(url_for('dashboard'))
 
+@app.route("/delete_user_jembatan/<int:jembatan_id>", methods=["POST"])
+@user_required
+def delete_user_jembatan(jembatan_id):
+    """Delete bridge record (user can only delete their own data)"""
+    try:
+        user_id = session['id']
+        
+        # Get jembatan data to verify ownership
+        jembatan = history_model.get_jembatan_by_id(jembatan_id)
+        
+        if not jembatan:
+            flash('Data tidak ditemukan', 'error')
+            return redirect(url_for('history'))
+        
+        # Check if user owns this data
+        if jembatan['user_id'] != user_id:
+            flash('Anda tidak memiliki izin untuk menghapus data ini', 'error')
+            return redirect(url_for('history'))
+        
+        if history_model.delete_jembatan(jembatan_id):
+            # Optional: Delete image files
+            try:
+                if jembatan['original_image_path']:
+                    os.remove(os.path.join('static', jembatan['original_image_path']))
+                if jembatan['annotated_image_path']:
+                    os.remove(os.path.join('static', jembatan['annotated_image_path']))
+            except:
+                pass  # Ignore file deletion errors
+            
+            flash('Data berhasil dihapus', 'success')
+        else:
+            flash('Gagal menghapus data', 'error')
+    except Exception as e:
+        flash(f'Error: {str(e)}', 'error')
+    
+    return redirect(url_for('history'))
+
 if __name__ == "__main__":
     app.run(debug=True)

@@ -25,7 +25,9 @@
                   <div class="bg-white dark:bg-gray-800 p-3 md:p-4 rounded-lg shadow-sm">
                     <h4 class="font-semibold text-sm md:text-base text-gray-900 dark:text-gray-100 mb-2 md:mb-3 text-center">Citra Asli</h4>
                     <img src="{{ url_for('static', filename=jembatan.original_image_path) }}" 
-                         alt="Original Image" class="w-full h-32 md:h-40 object-cover rounded-lg border border-gray-200 dark:border-gray-600">
+                         alt="Original Image" 
+                         class="w-full h-32 md:h-40 object-cover rounded-lg border border-gray-200 dark:border-gray-600 cursor-pointer hover:opacity-80 transition-opacity"
+                         onclick="showImagePreview('{{ url_for('static', filename=jembatan.original_image_path) }}', 'Citra Asli - {{ jembatan.nama_jembatan }}')">
                   </div>
                   
                   <!-- Annotated Image -->
@@ -33,7 +35,9 @@
                   <div class="bg-white dark:bg-gray-800 p-3 md:p-4 rounded-lg shadow-sm">
                     <h4 class="font-semibold text-sm md:text-base text-gray-900 dark:text-gray-100 mb-2 md:mb-3 text-center">Hasil Deteksi</h4>
                     <img src="{{ url_for('static', filename=jembatan.annotated_image_path) }}" 
-                         alt="Detection Result" class="w-full h-32 md:h-40 object-cover rounded-lg border border-gray-200 dark:border-gray-600">
+                         alt="Detection Result" 
+                         class="w-full h-32 md:h-40 object-cover rounded-lg border border-gray-200 dark:border-gray-600 cursor-pointer hover:opacity-80 transition-opacity"
+                         onclick="showImagePreview('{{ url_for('static', filename=jembatan.annotated_image_path) }}', 'Hasil Deteksi - {{ jembatan.nama_jembatan }}')">
                   </div>
                   {% endif %}
                 </div>
@@ -101,26 +105,16 @@
                   </div>
                 </div>
                 
-                {% if jembatan.confidence_scores %}
+                <!-- Delete Button -->
                 <div class="border-t border-gray-200 dark:border-gray-600 pt-3 md:pt-4">
-                  <h4 class="font-medium text-xs md:text-sm text-gray-900 dark:text-gray-100 mb-2">Detail Confidence Score:</h4>
-                  <div class="space-y-1 md:space-y-2">
-                    {% set confidence_list = jembatan.confidence_scores.split(',') if jembatan.confidence_scores else [] %}
-                    {% for confidence in confidence_list %}
-                      {% set conf_value = (confidence|float * 100)|round(1) %}
-                      <div class="flex items-center justify-between bg-white dark:bg-gray-800 px-2 md:px-3 py-1 md:py-2 rounded border border-gray-200 dark:border-gray-600">
-                        <span class="text-xs md:text-sm text-gray-600 dark:text-gray-400">Area {{ loop.index }}</span>
-                        <div class="flex items-center space-x-2">
-                          <div class="w-16 md:w-20 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 md:h-2">
-                            <div class="bg-blue-600 h-1.5 md:h-2 rounded-full" style="width: {{ conf_value }}%"></div>
-                          </div>
-                          <span class="text-xs md:text-sm font-medium text-gray-900 dark:text-gray-100">{{ conf_value }}%</span>
-                        </div>
-                      </div>
-                    {% endfor %}
-                  </div>
+                  <button onclick="confirmDelete({{ jembatan.id }}, '{{ jembatan.nama_jembatan }}')" 
+                          class="w-full bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm transition-colors duration-200 flex items-center justify-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H9a1 1 0 00-1 1v1M4 7h16"></path>
+                    </svg>
+                    <span>Hapus Data</span>
+                  </button>
                 </div>
-                {% endif %}
               </div>
             </div>
           </div>
@@ -159,6 +153,101 @@
     </div>
   </div>
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+    <div class="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 dark:bg-red-900 rounded-full mb-4">
+      <svg class="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+      </svg>
+    </div>
+    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 text-center mb-2">Konfirmasi Hapus Data</h3>
+    <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
+      Apakah Anda yakin ingin menghapus data deteksi <span id="bridgeName" class="font-semibold"></span>? 
+      Tindakan ini tidak dapat dibatalkan.
+    </p>
+    <div class="flex space-x-3">
+      <button onclick="closeDeleteModal()" 
+              class="flex-1 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">
+        Batal
+      </button>
+      <form id="deleteForm" method="POST" class="flex-1">
+        <button type="submit" 
+                class="w-full bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors">
+          Hapus
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Image Preview Modal -->
+<div id="imagePreviewModal" class="fixed inset-0 bg-black bg-opacity-75 hidden z-50 flex items-center justify-center p-4">
+  <div class="relative max-w-4xl max-h-full">
+    <!-- Close Button -->
+    <button onclick="closeImagePreview()" 
+            class="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors">
+      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      </svg>
+    </button>
+    
+    <!-- Image Container -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 max-h-full overflow-hidden">
+      <h3 id="imageTitle" class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 text-center"></h3>
+      <div class="flex justify-center items-center max-h-96 md:max-h-screen overflow-hidden">
+        <img id="previewImage" 
+             src="" 
+             alt="Preview" 
+             class="max-w-full max-h-full object-contain rounded-lg">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function confirmDelete(id, bridgeName) {
+  document.getElementById('bridgeName').textContent = bridgeName;
+  document.getElementById('deleteForm').action = '/delete_user_jembatan/' + id;
+  document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+function closeDeleteModal() {
+  document.getElementById('deleteModal').classList.add('hidden');
+}
+
+function showImagePreview(imageSrc, title) {
+  document.getElementById('previewImage').src = imageSrc;
+  document.getElementById('imageTitle').textContent = title;
+  document.getElementById('imagePreviewModal').classList.remove('hidden');
+}
+
+function closeImagePreview() {
+  document.getElementById('imagePreviewModal').classList.add('hidden');
+}
+
+// Close modals when clicking outside
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    closeDeleteModal();
+  }
+});
+
+document.getElementById('imagePreviewModal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    closeImagePreview();
+  }
+});
+
+// Close image preview with Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeImagePreview();
+    closeDeleteModal();
+  }
+});
+</script>
 
 {% endblock %}
 
