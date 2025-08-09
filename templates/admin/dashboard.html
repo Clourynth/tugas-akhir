@@ -1,280 +1,400 @@
-{% extends "admin/layout.html" %}
-{% block title %}Dashboard{% endblock %}
-{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Sistem Deteksi Retakan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+    }
+  </script>
+  <style>
+    /* Hide sidebar */
+    .sidebar, [data-sidebar], #sidebar, .admin-sidebar {
+      display: none !important;
+    }
+    
+    /* Adjust main content to full width */
+    .main-content, [data-main], #main-content, .admin-main {
+      margin-left: 0 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+    
+    /* Ensure container takes full width */
+    .admin-container {
+      padding-left: 0 !important;
+    }
 
-      <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Dashboard Sistem Deteksi Retakan</h2>
-      
-      <!-- Flash Messages -->
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          {% for category, message in messages %}
-            <div class="mb-4 p-3 rounded {% if category == 'error' %}bg-red-100 text-red-700{% elif category == 'success' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
-              {{ message }}
-            </div>
-          {% endfor %}
-        {% endif %}
-      {% endwith %}
-      
-      <!-- Statistics Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow transition-colors duration-500">
-          <h3 class="text-lg font-bold mb-2 text-gray-900 dark:text-gray-100">Total Data Jembatan</h3>
-          <p class="text-3xl font-semibold text-blue-500 dark:text-blue-400">{{ stats.total }}</p>
-        </div>
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow transition-colors duration-500">
-          <h3 class="text-lg font-bold mb-2 text-gray-900 dark:text-gray-100">Retakan Terdeteksi</h3>
-          <p class="text-3xl font-semibold text-red-500 dark:text-red-400">{{ stats.with_cracks }}</p>
-        </div>
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow transition-colors duration-500">
-          <h3 class="text-lg font-bold mb-2 text-gray-900 dark:text-gray-100">Tidak Ada Retakan</h3>
-          <p class="text-3xl font-semibold text-green-500 dark:text-green-400">{{ stats.without_cracks }}</p>
-        </div>
-      </div>
+    /* Hide header on scroll down, show on scroll up */
+    #navbar {
+      transition: transform 0.3s;
+    }
+  </style>
+</head>
 
-      <!-- Data Jembatan Section -->
-      <div class="mt-8 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow transition-colors duration-500">
-        <h3 class="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">Data Jembatan</h3>
-        <p class="text-gray-700 dark:text-gray-300 mb-6">Berikut adalah informasi mengenai data jembatan yang telah
-          ditambahkan ke dalam sistem.</p>
-        
-        {% if jembatan_list %}
-          <div class="grid gap-6 md:gap-8">
-            {% for jembatan in jembatan_list %}
-            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600 border border-blue-200 dark:border-gray-500 rounded-xl p-4 md:p-6 shadow-md hover:shadow-lg transition-all duration-300">
-              <!-- Header with bridge name and date -->
-              <div class="mb-3 md:mb-4 pb-3 md:pb-4 border-b border-blue-200 dark:border-gray-500">
-                <h3 class="text-lg md:text-xl font-bold text-blue-800 dark:text-blue-300">{{ jembatan.nama_jembatan }}</h3>
-                <p class="text-xs md:text-sm text-blue-600 dark:text-blue-400">{{ jembatan.created_at.strftime('%d/%m/%Y %H:%M') }} - User: {{ jembatan.username }}</p>
-              </div>
-              
-              <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-                <!-- Images Section -->
-                <div class="lg:col-span-2">
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <!-- Original Image -->
-                    <div class="bg-white dark:bg-gray-800 p-3 md:p-4 rounded-lg shadow-sm">
-                      <h4 class="font-semibold text-sm md:text-base text-gray-900 dark:text-gray-100 mb-2 md:mb-3 text-center">Citra Asli</h4>
-                      <img src="{{ url_for('static', filename=jembatan.original_image_path) }}" 
-                           alt="Original Image" 
-                           class="w-full h-32 md:h-40 object-cover rounded-lg border border-gray-200 dark:border-gray-600 cursor-pointer hover:opacity-80 transition-opacity"
-                           onclick="showImagePreview('{{ url_for('static', filename=jembatan.original_image_path) }}', 'Citra Asli - {{ jembatan.nama_jembatan }}')">
-                    </div>
-                    
-                    <!-- Annotated Image -->
-                    {% if jembatan.annotated_image_path %}
-                    <div class="bg-white dark:bg-gray-800 p-3 md:p-4 rounded-lg shadow-sm">
-                      <h4 class="font-semibold text-sm md:text-base text-gray-900 dark:text-gray-100 mb-2 md:mb-3 text-center">Hasil Deteksi</h4>
-                      <img src="{{ url_for('static', filename=jembatan.annotated_image_path) }}" 
-                           alt="Detection Result" 
-                           class="w-full h-32 md:h-40 object-cover rounded-lg border border-gray-200 dark:border-gray-600 cursor-pointer hover:opacity-80 transition-opacity"
-                           onclick="showImagePreview('{{ url_for('static', filename=jembatan.annotated_image_path) }}', 'Hasil Deteksi - {{ jembatan.nama_jembatan }}')">
-                    </div>
-                    {% endif %}
-                  </div>
-                </div>
-                
-                <!-- Information Panel -->
-                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 md:p-6 space-y-3 md:space-y-4">
-                  <h4 class="text-base md:text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center mb-3 md:mb-4">
-                    <svg class="w-4 h-4 md:w-5 md:h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                    Informasi Deteksi
-                  </h4>
-                  
-                  <div class="space-y-2 md:space-y-3">
-                    <div class="flex items-start space-x-2 md:space-x-3">
-                      <svg class="w-4 h-4 md:w-5 md:h-5 text-gray-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                      </svg>
-                      <div>
-                        <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400">Lokasi</p>
-                        <p class="font-medium text-sm md:text-base text-gray-900 dark:text-gray-100">{{ jembatan.lokasi }}</p>
-                      </div>
-                    </div>
-                    
-                    <div class="flex items-start space-x-2 md:space-x-3">
-                      <svg class="w-4 h-4 md:w-5 md:h-5 text-gray-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                      </svg>
-                      <div>
-                        <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400">Status Deteksi</p>
-                        <div class="flex items-center space-x-2">
-                          <span class="inline-flex items-center px-2 md:px-3 py-0.5 md:py-1 rounded-full text-xs md:text-sm font-medium {% if jembatan.detected %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200{% else %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200{% endif %}">
-                            {% if jembatan.detected %}
-                              <svg class="w-3 h-3 md:w-4 md:h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-                              </svg>
-                              Retakan Terdeteksi
-                            {% else %}
-                              <svg class="w-3 h-3 md:w-4 md:h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                              </svg>
-                              Tidak Ada Retakan
-                            {% endif %}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div class="flex items-start space-x-2 md:space-x-3">
-                      <svg class="w-4 h-4 md:w-5 md:h-5 text-gray-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
-                      </svg>
-                      <div>
-                        <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400">Jumlah Area Terdeteksi</p>
-                        <p class="font-medium text-sm md:text-base text-gray-900 dark:text-gray-100">{{ jembatan.num_detections }} area</p>
-                      </div>
-                    </div>
-                    
-                    <div class="flex items-center space-x-2 pt-2 border-t border-gray-200 dark:border-gray-600">
-                      <svg class="w-3 h-3 md:w-4 md:h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                      </svg>
-                      <p class="text-xs md:text-sm text-green-600 dark:text-green-400 font-medium">Data tersimpan dengan ID: {{ jembatan.id }}</p>
-                    </div>
-                  </div>
-                  
-                  {% if jembatan.confidence_scores %}
-                  <div class="border-t border-gray-200 dark:border-gray-600 pt-3 md:pt-4">
-                    <h4 class="font-medium text-xs md:text-sm text-gray-900 dark:text-gray-100 mb-2">Detail Confidence Score:</h4>
-                    <div class="space-y-1 md:space-y-2">
-                      {% set confidence_list = jembatan.confidence_scores.split(',') if jembatan.confidence_scores else [] %}
-                      {% for confidence in confidence_list %}
-                        {% set conf_value = (confidence|float * 100)|round(1) %}
-                        <div class="flex items-center justify-between bg-white dark:bg-gray-800 px-2 md:px-3 py-1 md:py-2 rounded border border-gray-200 dark:border-gray-600">
-                          <span class="text-xs md:text-sm text-gray-600 dark:text-gray-400">Area {{ loop.index }}</span>
-                          <div class="flex items-center space-x-2">
-                            <div class="w-16 md:w-20 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 md:h-2">
-                              <div class="bg-blue-600 h-1.5 md:h-2 rounded-full" style="width: {{ conf_value }}%"></div>
-                            </div>
-                            <span class="text-xs md:text-sm font-medium text-gray-900 dark:text-gray-100">{{ conf_value }}%</span>
-                          </div>
-                        </div>
-                      {% endfor %}
-                    </div>
-                  </div>
-                  {% endif %}
-                  
-                  <!-- Admin Delete Button -->
-                  <div class="border-t border-gray-200 dark:border-gray-600 pt-3 md:pt-4">
-                    <button onclick="confirmDelete({{ jembatan.id }}, '{{ jembatan.nama_jembatan }}')" 
-                            class="w-full bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm transition-colors duration-200 flex items-center justify-center space-x-2">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H9a1 1 0 00-1 1v1M4 7h16"></path>
-                      </svg>
-                      <span>Hapus Data</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-        {% else %}
-          <div class="text-center py-8 md:py-16">
-            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-6 md:p-8 border border-blue-200 dark:border-gray-500">
-              <div class="text-4xl md:text-6xl mb-3 md:mb-4">📊</div>
-              <p class="text-gray-600 dark:text-gray-300 text-base md:text-xl mb-4 md:mb-6">Belum ada data jembatan</p>
-            </div>
-          </div>
-        {% endif %}
-      </div>
-
-      <!-- Delete Confirmation Modal -->
-      <div id="deleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
-          <div class="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 dark:bg-red-900 rounded-full mb-4">
-            <svg class="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+<body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-500">
+  <!-- Header -->
+  <header id="navbar" class="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700 fixed top-0 left-0 right-0 z-50 transition-transform duration-300">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center py-4">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <svg class="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
             </svg>
           </div>
-          <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 text-center mb-2">Konfirmasi Hapus Data</h3>
-          <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
-            Apakah Anda yakin ingin menghapus data deteksi <span id="bridgeName" class="font-semibold"></span>? 
-            Tindakan ini tidak dapat dibatalkan.
-          </p>
-          <div class="flex space-x-3">
-            <button onclick="closeDeleteModal()" 
-                    class="flex-1 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">
-              Batal
-            </button>
-            <form id="deleteForm" method="POST" class="flex-1">
-              <button type="submit" 
-                      class="w-full bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors">
-                Hapus
-              </button>
-            </form>
+          <div class="ml-4">
+            <h1 class="text-xl font-semibold text-gray-900 dark:text-gray-100">Dashboard</h1>
           </div>
         </div>
-      </div>
-
-      <!-- Image Preview Modal -->
-      <div id="imagePreviewModal" class="fixed inset-0 bg-black bg-opacity-75 hidden z-50 flex items-center justify-center p-4">
-        <div class="relative max-w-4xl max-h-full">
-          <!-- Close Button -->
-          <button onclick="closeImagePreview()" 
-                  class="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors">
-            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        
+        <div class="flex items-center space-x-4">
+          <span class="text-sm text-gray-700 dark:text-gray-300">Welcome, {{ user }}</span>
+          
+          <!-- Dark Mode Toggle -->
+          <button onclick="toggleDarkMode()" 
+                  class="p-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-300">
+            <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path class="dark:hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+              <path class="hidden dark:block" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
             </svg>
           </button>
           
-          <!-- Image Container -->
-          <div class="bg-white dark:bg-gray-800 rounded-lg p-4 max-h-full overflow-hidden">
-            <h3 id="imageTitle" class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 text-center"></h3>
-            <div class="flex justify-center items-center max-h-96 md:max-h-screen overflow-hidden">
-              <img id="previewImage" 
-                   src="" 
-                   alt="Preview" 
-                   class="max-w-full max-h-full object-contain rounded-lg">
+          <form method="POST" action="{{ url_for('logout') }}" class="inline">
+            <button type="submit" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+              Logout
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 mt-20">
+    <!-- Add a simple header since sidebar is disabled -->
+    <div class="mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Halaman Dashboard</h1>
+          <p class="text-sm text-gray-600 dark:text-gray-400">Welcome, {{ user }}</p>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">Dashboard Sistem Deteksi Retakan</h2>
+    
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="mb-4 p-3 rounded {% if category == 'error' %}bg-red-100 text-red-700{% elif category == 'success' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow transition-colors duration-500">
+        <h3 class="text-lg font-bold mb-2 text-gray-900 dark:text-gray-100">Total Data Jembatan</h3>
+        <p class="text-3xl font-semibold text-blue-500 dark:text-blue-400">{{ stats.total }}</p>
+      </div>
+      <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow transition-colors duration-500">
+        <h3 class="text-lg font-bold mb-2 text-gray-900 dark:text-gray-100">Retakan Terdeteksi</h3>
+        <p class="text-3xl font-semibold text-red-500 dark:text-red-400">{{ stats.with_cracks }}</p>
+      </div>
+      <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow transition-colors duration-500">
+        <h3 class="text-lg font-bold mb-2 text-gray-900 dark:text-gray-100">Tidak Ada Retakan</h3>
+        <p class="text-3xl font-semibold text-green-500 dark:text-green-400">{{ stats.without_cracks }}</p>
+      </div>
+    </div>
+
+    <!-- Data Jembatan Section -->
+    <div class="mt-8 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow transition-colors duration-500">
+      <h3 class="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">Data Jembatan</h3>
+      <p class="text-gray-700 dark:text-gray-300 mb-6">Berikut adalah informasi mengenai data jembatan yang telah
+        ditambahkan ke dalam sistem.</p>
+      
+      {% if jembatan_list %}
+        <div class="grid gap-6 md:gap-8">
+          {% for jembatan in jembatan_list %}
+          <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600 border border-blue-200 dark:border-gray-500 rounded-xl p-4 md:p-6 shadow-md hover:shadow-lg transition-all duration-300">
+            <!-- Header with bridge name and date -->
+            <div class="mb-3 md:mb-4 pb-3 md:pb-4 border-b border-blue-200 dark:border-gray-500">
+              <h3 class="text-lg md:text-xl font-bold text-blue-800 dark:text-blue-300">{{ jembatan.nama_jembatan }}</h3>
+              <p class="text-xs md:text-sm text-blue-600 dark:text-blue-400">{{ jembatan.created_at.strftime('%d/%m/%Y %H:%M') }} - User: {{ jembatan.username }}</p>
             </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+              <!-- Images Section -->
+              <div class="lg:col-span-2">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <!-- Original Image -->
+                  <div class="bg-white dark:bg-gray-800 p-3 md:p-4 rounded-lg shadow-sm">
+                    <h4 class="font-semibold text-sm md:text-base text-gray-900 dark:text-gray-100 mb-2 md:mb-3 text-center">Citra Asli</h4>
+                    <img src="{{ url_for('static', filename=jembatan.original_image_path) }}" 
+                         alt="Original Image" 
+                         class="w-full h-32 md:h-40 object-cover rounded-lg border border-gray-200 dark:border-gray-600 cursor-pointer hover:opacity-80 transition-opacity"
+                         onclick="showImagePreview('{{ url_for('static', filename=jembatan.original_image_path) }}', 'Citra Asli - {{ jembatan.nama_jembatan }}')">
+                  </div>
+                  
+                  <!-- Annotated Image -->
+                  {% if jembatan.annotated_image_path %}
+                  <div class="bg-white dark:bg-gray-800 p-3 md:p-4 rounded-lg shadow-sm">
+                    <h4 class="font-semibold text-sm md:text-base text-gray-900 dark:text-gray-100 mb-2 md:mb-3 text-center">Hasil Deteksi</h4>
+                    <img src="{{ url_for('static', filename=jembatan.annotated_image_path) }}" 
+                         alt="Detection Result" 
+                         class="w-full h-32 md:h-40 object-cover rounded-lg border border-gray-200 dark:border-gray-600 cursor-pointer hover:opacity-80 transition-opacity"
+                         onclick="showImagePreview('{{ url_for('static', filename=jembatan.annotated_image_path) }}', 'Hasil Deteksi - {{ jembatan.nama_jembatan }}')">
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+              
+              <!-- Information Panel -->
+              <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 md:p-6 space-y-3 md:space-y-4">
+                <h4 class="text-base md:text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center mb-3 md:mb-4">
+                  <svg class="w-4 h-4 md:w-5 md:h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                  </svg>
+                  Informasi Deteksi
+                </h4>
+                
+                <div class="space-y-2 md:space-y-3">
+                  <div class="flex items-start space-x-2 md:space-x-3">
+                    <svg class="w-4 h-4 md:w-5 md:h-5 text-gray-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    </svg>
+                    <div>
+                      <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400">Lokasi</p>
+                      <p class="font-medium text-sm md:text-base text-gray-900 dark:text-gray-100">{{ jembatan.lokasi }}</p>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-start space-x-2 md:space-x-3">
+                    <svg class="w-4 h-4 md:w-5 md:h-5 text-gray-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div>
+                      <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400">Status Deteksi</p>
+                      <div class="flex items-center space-x-2">
+                        <span class="inline-flex items-center px-2 md:px-3 py-0.5 md:py-1 rounded-full text-xs md:text-sm font-medium {% if jembatan.detected %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200{% else %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200{% endif %}">
+                          {% if jembatan.detected %}
+                            <svg class="w-3 h-3 md:w-4 md:h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                            </svg>
+                            Retakan Terdeteksi
+                          {% else %}
+                            <svg class="w-3 h-3 md:w-4 md:h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            </svg>
+                            Tidak Ada Retakan
+                          {% endif %}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-start space-x-2 md:space-x-3">
+                    <svg class="w-4 h-4 md:w-5 md:h-5 text-gray-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                    </svg>
+                    <div>
+                      <p class="text-xs md:text-sm text-gray-600 dark:text-gray-400">Jumlah Area Terdeteksi</p>
+                      <p class="font-medium text-sm md:text-base text-gray-900 dark:text-gray-100">{{ jembatan.num_detections }} area</p>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center space-x-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                    <svg class="w-3 h-3 md:w-4 md:h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                    </svg>
+                    <p class="text-xs md:text-sm text-green-600 dark:text-green-400 font-medium">Data tersimpan dengan ID: {{ jembatan.id }}</p>
+                  </div>
+                </div>
+                
+                {% if jembatan.confidence_scores %}
+                <div class="border-t border-gray-200 dark:border-gray-600 pt-3 md:pt-4">
+                  <h4 class="font-medium text-xs md:text-sm text-gray-900 dark:text-gray-100 mb-2">Detail Confidence Score:</h4>
+                  <div class="space-y-1 md:space-y-2">
+                    {% set confidence_list = jembatan.confidence_scores.split(',') if jembatan.confidence_scores else [] %}
+                    {% for confidence in confidence_list %}
+                      {% set conf_value = (confidence|float * 100)|round(1) %}
+                      <div class="flex items-center justify-between bg-white dark:bg-gray-800 px-2 md:px-3 py-1 md:py-2 rounded border border-gray-200 dark:border-gray-600">
+                        <span class="text-xs md:text-sm text-gray-600 dark:text-gray-400">Area {{ loop.index }}</span>
+                        <div class="flex items-center space-x-2">
+                          <div class="w-16 md:w-20 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 md:h-2">
+                            <div class="bg-blue-600 h-1.5 md:h-2 rounded-full" style="width: {{ conf_value }}%"></div>
+                          </div>
+                          <span class="text-xs md:text-sm font-medium text-gray-900 dark:text-gray-100">{{ conf_value }}%</span>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+                {% endif %}
+                
+                <!-- Admin Delete Button -->
+                <div class="border-t border-gray-200 dark:border-gray-600 pt-3 md:pt-4">
+                  <button onclick="confirmDelete({{ jembatan.id }}, '{{ jembatan.nama_jembatan }}')" 
+                          class="w-full bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm transition-colors duration-200 flex items-center justify-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H9a1 1 0 00-1 1v1M4 7h16"></path>
+                    </svg>
+                    <span>Hapus Data</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-center py-8 md:py-16">
+          <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600 rounded-xl p-6 md:p-8 border border-blue-200 dark:border-gray-500">
+            <div class="text-4xl md:text-6xl mb-3 md:mb-4">📊</div>
+            <p class="text-gray-600 dark:text-gray-300 text-base md:text-xl mb-4 md:mb-6">Belum ada data jembatan</p>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+        <div class="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 dark:bg-red-900 rounded-full mb-4">
+          <svg class="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+          </svg>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 text-center mb-2">Konfirmasi Hapus Data</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
+          Apakah Anda yakin ingin menghapus data deteksi <span id="bridgeName" class="font-semibold"></span>? 
+          Tindakan ini tidak dapat dibatalkan.
+        </p>
+        <div class="flex space-x-3">
+          <button onclick="closeDeleteModal()" 
+                  class="flex-1 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">
+            Batal
+          </button>
+          <form id="deleteForm" method="POST" class="flex-1">
+            <button type="submit" 
+                    class="w-full bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors">
+              Hapus
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Image Preview Modal -->
+    <div id="imagePreviewModal" class="fixed inset-0 bg-black bg-opacity-75 hidden z-50 flex items-center justify-center p-4">
+      <div class="relative max-w-4xl max-h-full">
+        <!-- Close Button -->
+        <button onclick="closeImagePreview()" 
+                class="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+        
+        <!-- Image Container -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 max-h-full overflow-hidden">
+          <h3 id="imageTitle" class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 text-center"></h3>
+          <div class="flex justify-center items-center max-h-96 md:max-h-screen overflow-hidden">
+            <img id="previewImage" 
+                 src="" 
+                 alt="Preview" 
+                 class="max-w-full max-h-full object-contain rounded-lg">
           </div>
         </div>
       </div>
+    </div>
 
-      <script>
-      function confirmDelete(id, bridgeName) {
-        document.getElementById('bridgeName').textContent = bridgeName;
-        document.getElementById('deleteForm').action = '/delete_jembatan/' + id;
-        document.getElementById('deleteModal').classList.remove('hidden');
+    <script>
+    function confirmDelete(id, bridgeName) {
+      document.getElementById('bridgeName').textContent = bridgeName;
+      document.getElementById('deleteForm').action = '/delete_jembatan/' + id;
+      document.getElementById('deleteModal').classList.remove('hidden');
+    }
+
+    function closeDeleteModal() {
+      document.getElementById('deleteModal').classList.add('hidden');
+    }
+
+    function showImagePreview(imageSrc, title) {
+      document.getElementById('previewImage').src = imageSrc;
+      document.getElementById('imageTitle').textContent = title;
+      document.getElementById('imagePreviewModal').classList.remove('hidden');
+    }
+
+    function closeImagePreview() {
+      document.getElementById('imagePreviewModal').classList.add('hidden');
+    }
+
+    // Close modals when clicking outside
+    document.getElementById('deleteModal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeDeleteModal();
       }
+    });
 
-      function closeDeleteModal() {
-        document.getElementById('deleteModal').classList.add('hidden');
+    document.getElementById('imagePreviewModal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeImagePreview();
       }
+    });
 
-      function showImagePreview(imageSrc, title) {
-        document.getElementById('previewImage').src = imageSrc;
-        document.getElementById('imageTitle').textContent = title;
-        document.getElementById('imagePreviewModal').classList.remove('hidden');
+    // Close image preview with Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeImagePreview();
+        closeDeleteModal();
       }
+    });
 
-      function closeImagePreview() {
-        document.getElementById('imagePreviewModal').classList.add('hidden');
+    // Load dark mode from localStorage
+    if (localStorage.getItem("theme") === "dark") {
+      document.documentElement.classList.add("dark");
+    }
+
+    // Dark mode toggle function
+    function toggleDarkMode() {
+      const root = document.documentElement;
+      root.classList.toggle("dark");
+      
+      // Save preference to localStorage
+      if (root.classList.contains("dark")) {
+        localStorage.setItem("theme", "dark");
+      } else {
+        localStorage.setItem("theme", "light");
       }
+    }
 
-      // Close modals when clicking outside
-      document.getElementById('deleteModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-          closeDeleteModal();
-        }
-      });
-
-      document.getElementById('imagePreviewModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-          closeImagePreview();
-        }
-      });
-
-      // Close image preview with Escape key
-      document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-          closeImagePreview();
-          closeDeleteModal();
-        }
-      });
-      </script>
-
-{% endblock %}
+    // Navbar scroll behavior
+    let lastScrollTop = 0;
+    const navbar = document.getElementById('navbar');
+    
+    window.addEventListener('scroll', function() {
+      let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      
+      if (scrollTop > lastScrollTop && scrollTop > 100) {
+        // Scrolling down and past 100px
+        navbar.style.transform = 'translateY(-100%)';
+      } else {
+        // Scrolling up
+        navbar.style.transform = 'translateY(0)';
+      }
+      
+      lastScrollTop = scrollTop <= 0 ? 0 : scrollTop; // For Mobile or negative scrolling
+    });
+    </script>
+  </main>
+</body>
+</html>
 
