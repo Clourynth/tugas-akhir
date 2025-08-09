@@ -97,6 +97,15 @@
             </svg>
             Citra Jembatan
           </label>
+          
+          <!-- File validation error message -->
+          <div id="fileError" class="hidden mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-800 flex items-center">
+            <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+            </svg>
+            <span id="fileErrorMessage" class="text-sm font-medium"></span>
+          </div>
+          
           <div id="dropZone"
             class="relative border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 md:p-8 text-center hover:border-blue-500 dark:hover:border-blue-400 transition-all duration-300 cursor-pointer bg-gray-50 dark:bg-gray-700">
             <input type="file" name="image" accept="image/*" id="fileInput"
@@ -329,9 +338,66 @@
   const uploadForm = document.getElementById('uploadForm');
   const loadingOverlay = document.getElementById('loading-overlay');
   const submitBtn = document.getElementById('submitBtn');
+  const fileError = document.getElementById('fileError');
+  const fileErrorMessage = document.getElementById('fileErrorMessage');
+
+  // Allowed image file types
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp', 'image/webp'];
+  const maxFileSize = 10 * 1024 * 1024; // 10MB in bytes
+
+  // Function to show error message
+  function showFileError(message) {
+    fileErrorMessage.textContent = message;
+    fileError.classList.remove('hidden');
+    dropZone.classList.add('border-red-500', 'bg-red-50', 'dark:bg-red-900');
+    
+    // Clear file input
+    fileInput.value = '';
+    
+    // Hide preview and show drop content
+    filePreview.classList.add('hidden');
+    dropContent.classList.remove('hidden');
+  }
+
+  // Function to hide error message
+  function hideFileError() {
+    fileError.classList.add('hidden');
+    dropZone.classList.remove('border-red-500', 'bg-red-50', 'dark:bg-red-900');
+  }
+
+  // Function to validate file
+  function validateFile(file) {
+    // Check file type
+    if (!allowedTypes.includes(file.type)) {
+      showFileError('File tidak didukung. Hanya file gambar (JPG, PNG, GIF, BMP, WebP) yang diperbolehkan.');
+      return false;
+    }
+
+    // Check file size
+    if (file.size > maxFileSize) {
+      showFileError('Ukuran file terlalu besar. Maksimal 10MB.');
+      return false;
+    }
+
+    hideFileError();
+    return true;
+  }
 
   // Show loading overlay when form is submitted
   uploadForm.addEventListener('submit', function (e) {
+    // Check if file is selected and valid
+    if (!fileInput.files || fileInput.files.length === 0) {
+      e.preventDefault();
+      showFileError('Silakan pilih file gambar terlebih dahulu.');
+      return;
+    }
+
+    const file = fileInput.files[0];
+    if (!validateFile(file)) {
+      e.preventDefault();
+      return;
+    }
+
     // Show loading overlay
     loadingOverlay.classList.remove('hidden');
 
@@ -364,6 +430,7 @@
   });
 
   function highlight(e) {
+    if (!fileError.classList.contains('hidden')) return; // Don't highlight if there's an error
     dropZone.classList.add('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900');
   }
 
@@ -378,14 +445,20 @@
     const files = dt.files;
 
     if (files.length > 0) {
-      fileInput.files = files;
-      handleFileSelect(files[0]);
+      const file = files[0];
+      if (validateFile(file)) {
+        fileInput.files = files;
+        handleFileSelect(file);
+      }
     }
   }
 
   fileInput.addEventListener('change', function (e) {
     if (e.target.files.length > 0) {
-      handleFileSelect(e.target.files[0]);
+      const file = e.target.files[0];
+      if (validateFile(file)) {
+        handleFileSelect(file);
+      }
     }
   });
 

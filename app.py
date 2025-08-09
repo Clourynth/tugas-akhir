@@ -149,6 +149,23 @@ def detection():
             flash('No selected file', 'error')
             return render_template("user/detection.html", result=result)
             
+        # Server-side file validation
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
+        file_extension = file.filename.lower().split('.')[-1] if '.' in file.filename else ''
+        
+        if file_extension not in allowed_extensions:
+            flash('File tidak didukung. Hanya file gambar (PNG, JPG, JPEG, GIF, BMP, WebP) yang diperbolehkan.', 'error')
+            return render_template("user/detection.html", result=result)
+        
+        # Check file size (10MB limit)
+        file.seek(0, 2)  # Move to end of file
+        file_size = file.tell()
+        file.seek(0)  # Reset to beginning
+        
+        if file_size > 10 * 1024 * 1024:  # 10MB
+            flash('Ukuran file terlalu besar. Maksimal 10MB.', 'error')
+            return render_template("user/detection.html", result=result)
+            
         if file:
             # Get form data
             nama_jembatan = request.form.get('nama_jembatan', '')
@@ -159,32 +176,40 @@ def detection():
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
             
-            # Lakukan prediksi menggunakan detector
-            prediction_result = detector.predict(filepath, save_annotated=True, output_dir=app.config['UPLOAD_FOLDER'])
-            
-            # Format result untuk template
-            result = {
-                'detected': prediction_result['detected'],
-                'original_image_path': f'uploads/{filename}',
-                'annotated_image_path': prediction_result['annotated_image_path'],
-                'num_detections': prediction_result['num_detections'],
-                'predictions': prediction_result['predictions'],
-                'nama_jembatan': nama_jembatan,
-                'lokasi': lokasi,
-                'user_id': user_id
-            }
-            
-            # Save to database
             try:
-                jembatan_id = detection_model.save_detection_result(result)
-                result['id'] = jembatan_id
+                # Lakukan prediksi menggunakan detector
+                prediction_result = detector.predict(filepath, save_annotated=True, output_dir=app.config['UPLOAD_FOLDER'])
                 
-                if prediction_result['detected']:
-                    flash(f'Retakan terdeteksi! Ditemukan {prediction_result["num_detections"]} area retakan. Data telah disimpan.', 'success')
-                else:
-                    flash('Tidak ada retakan yang terdeteksi. Data telah disimpan.', 'info')
+                # Format result untuk template
+                result = {
+                    'detected': prediction_result['detected'],
+                    'original_image_path': f'uploads/{filename}',
+                    'annotated_image_path': prediction_result['annotated_image_path'],
+                    'num_detections': prediction_result['num_detections'],
+                    'predictions': prediction_result['predictions'],
+                    'nama_jembatan': nama_jembatan,
+                    'lokasi': lokasi,
+                    'user_id': user_id
+                }
+                
+                # Save to database
+                try:
+                    jembatan_id = detection_model.save_detection_result(result)
+                    result['id'] = jembatan_id
+                    
+                    if prediction_result['detected']:
+                        flash(f'Retakan terdeteksi! Ditemukan {prediction_result["num_detections"]} area retakan. Data telah disimpan.', 'success')
+                    else:
+                        flash('Tidak ada retakan yang terdeteksi. Data telah disimpan.', 'info')
+                except Exception as e:
+                    flash(f'Error menyimpan data: {str(e)}', 'error')
             except Exception as e:
-                flash(f'Error menyimpan data: {str(e)}', 'error')
+                flash(f'Error memproses gambar: {str(e)}. Pastikan file yang diupload adalah gambar yang valid.', 'error')
+                # Remove uploaded file if processing failed
+                try:
+                    os.remove(filepath)
+                except:
+                    pass
 
     return render_template("user/detection.html", result=result, user=username)
 

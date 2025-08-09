@@ -73,3 +73,6 @@ htmlcov/
 
 # ml_models
 ml_models/
+
+# uploaded files
+static/uploads/

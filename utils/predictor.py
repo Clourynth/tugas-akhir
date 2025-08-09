@@ -22,8 +22,8 @@ class CrackDetector:
         """Setup configuration untuk model Detectron2"""
         self.cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml"))
         self.cfg.MODEL.WEIGHTS = model_path
-        self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
-        self.cfg.MODEL.ROI_HEADS.NMS_THRESH_TEST = 0.7  # default 0.5, coba naikkan ke 0.6 atau 0.7
+        self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.2
+        # self.cfg.MODEL.ROI_HEADS.NMS_THRESH_TEST = 0.2  # default 0.5, coba naikkan ke 0.6 atau 0.7
         self.cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # Hanya 1 kelas (retakan)
         self.cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     
@@ -51,52 +51,52 @@ class CrackDetector:
         instances = outputs["instances"]
 
         # # --- Gabungkan mask yang saling berdekatan menggunakan morphological closing ---
-        # if instances.has("pred_masks") and len(instances) > 0:
-        #     masks = instances.pred_masks.cpu().numpy()  # (N, H, W)
-        #     scores = instances.scores.cpu().numpy()
-        #     combined_mask = np.sum(masks, axis=0) > 0
-        #     combined_mask = combined_mask.astype(np.uint8) * 255
+        if instances.has("pred_masks") and len(instances) > 0:
+            masks = instances.pred_masks.cpu().numpy()  # (N, H, W)
+            scores = instances.scores.cpu().numpy()
+            combined_mask = np.sum(masks, axis=0) > 0
+            combined_mask = combined_mask.astype(np.uint8) * 255
 
-        #     # Morphological closing
-        #     kernel = np.ones((2, 2), np.uint8)
-        #     closed_mask = cv2.morphologyEx(combined_mask, cv2.MORPH_CLOSE, kernel)
+            # Morphological closing
+            kernel = np.ones((2, 2), np.uint8)
+            closed_mask = cv2.morphologyEx(combined_mask, cv2.MORPH_CLOSE, kernel)
 
-        #     # Connected components (labeling)
-        #     num_labels, labeled = cv2.connectedComponents(closed_mask)
+            # Connected components (labeling)
+            num_labels, labeled = cv2.connectedComponents(closed_mask)
 
-        #     from detectron2.structures import Instances, Boxes
+            from detectron2.structures import Instances, Boxes
 
-        #     new_instances = Instances(instances.image_size)
-        #     pred_masks = []
-        #     pred_boxes = []
-        #     combined_scores = []
+            new_instances = Instances(instances.image_size)
+            pred_masks = []
+            pred_boxes = []
+            combined_scores = []
 
-        #     for i in range(1, num_labels):  # label 0 = background
-        #         component = (labeled == i).astype(np.uint8)
+            for i in range(1, num_labels):  # label 0 = background
+                component = (labeled == i).astype(np.uint8)
 
-        #         # Mask
-        #         pred_masks.append(torch.tensor(component.astype(bool)))
+                # Mask
+                pred_masks.append(torch.tensor(component.astype(bool)))
 
-        #         # Bounding box
-        #         ys, xs = np.where(component == 1)
-        #         x1, y1, x2, y2 = xs.min(), ys.min(), xs.max(), ys.max()
-        #         pred_boxes.append([x1, y1, x2, y2])
+                # Bounding box
+                ys, xs = np.where(component == 1)
+                x1, y1, x2, y2 = xs.min(), ys.min(), xs.max(), ys.max()
+                pred_boxes.append([x1, y1, x2, y2])
 
-        #         # Cari skor mask asli yang overlap paling besar
-        #         overlaps = [(m & component).sum() for m in masks]
-        #         if max(overlaps) > 0:
-        #             best_idx = np.argmax(overlaps)
-        #             combined_scores.append(scores[best_idx])
-        #         else:
-        #             combined_scores.append(0.5)  # fallback jika tidak ada overlap (jarang)
+                # Cari skor mask asli yang overlap paling besar
+                overlaps = [(m & component).sum() for m in masks]
+                if max(overlaps) > 0:
+                    best_idx = np.argmax(overlaps)
+                    combined_scores.append(scores[best_idx])
+                else:
+                    combined_scores.append(0.5)  # fallback jika tidak ada overlap (jarang)
 
-        #     if pred_masks:
-        #         new_instances.pred_masks = torch.stack(pred_masks)
-        #         new_instances.pred_boxes = Boxes(torch.tensor(pred_boxes).float())
-        #         new_instances.scores = torch.tensor(combined_scores)
-        #         new_instances.pred_classes = torch.tensor([0] * len(pred_masks))
+            if pred_masks:
+                new_instances.pred_masks = torch.stack(pred_masks)
+                new_instances.pred_boxes = Boxes(torch.tensor(pred_boxes).float())
+                new_instances.scores = torch.tensor(combined_scores)
+                new_instances.pred_classes = torch.tensor([0] * len(pred_masks))
 
-        #         instances = new_instances
+                instances = new_instances
 
 
         
